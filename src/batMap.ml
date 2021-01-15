@@ -523,6 +523,10 @@ module Concrete = struct
     (empty |> add 0 1 |> add 1 1 |> choose) (empty |> add 1 1 |> add 0 1 |> choose)
    *)
 
+  let choose_opt m =
+    try Some (choose m)
+    with Not_found -> None
+
   let any = function
     | Empty -> raise Not_found
     | Node (_, k, v, _, _) -> (k,v)
@@ -844,6 +848,7 @@ sig
   val max_binding : 'a t -> (key * 'a)
   val pop_max_binding: 'a t -> (key * 'a) * 'a t
   val choose : 'a t -> (key * 'a)
+  val choose_opt : 'a t -> (key * 'a) option
   val any : 'a t -> (key * 'a)
   val split : key -> 'a t -> ('a t * 'a option * 'a t)
   val partition : (key -> 'a -> bool) -> 'a t -> 'a t * 'a t
@@ -963,6 +968,7 @@ struct
     (maxi, t_of_impl rest)
 
   let choose t = Concrete.choose (impl_of_t t)
+  let choose_opt t = Concrete.choose_opt (impl_of_t t)
   let any t = Concrete.any (impl_of_t t)
 
   let split k t =
@@ -1158,6 +1164,7 @@ let filter f t = Concrete.filter f t Pervasives.compare
 let filter_map f t = Concrete.filter_map f t Pervasives.compare
 
 let choose = Concrete.choose
+let choose_opt = Concrete.choose_opt
 let any = Concrete.any
 let max_binding = Concrete.max_binding
 let min_binding = Concrete.min_binding

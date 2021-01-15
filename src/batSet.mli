@@ -75,6 +75,45 @@ sig
       @raise Not_found if no element is equal
   *)
 
+  val find_opt : unit
+  (** [find x s] returns [Some k] for the element [k] in [s] that
+      tests equal to [x] under its comparison function.
+      If no element is equal, return [None]
+
+      @since NEXT_RELEASE *)
+
+  val find_first : (elt -> bool) -> t -> elt
+  (** [find_first f m] returns the first element [e] for which [f e] is true
+      or raises [Not_found] if there is no such element.
+      [f] must be monotonically increasing,
+      i.e. if [k1 < k2 && f k1] is true then [f k2] must also be true. 
+    
+      @since NEXT_RELEASE *)
+    
+  val find_first_opt : (elt -> bool) -> t -> elt option
+  (** [find_first_opt f m] returns [Some e] for the first element [e]
+      for which [f e] is true or returns [None] if there is no such element.
+      [f] must be monotonically increasing,
+      i.e. if [k1 < k2 && f k1] is true then [f k2] must also be true. 
+    
+      @since NEXT_RELEASE *)
+
+  val find_last : (elt -> bool) -> t -> elt
+  (** [find_last f m] returns the last element [e] for which [f e] is true
+    or raises [Not_found] if there is no such element.
+    [f] must be monotonically decreasing,
+    i.e. if [k1 < k2 && f k2] is true then [f k1] must also be true. 
+    
+    @since NEXT_RELEASE *)
+    
+  val find_last_opt : (elt -> bool) -> t -> elt option
+  (** [find_last_opt f m] returns [Some e] for the last element [e]
+    for which [f e] is true or returns [None] if there is no such element.
+    [f] must be monotonically decreasing,
+    i.e. if [k1 < k2 && f k2] is true then [f k1] must also be true. 
+    
+    @since NEXT_RELEASE *)
+
   val add: elt -> t -> t
   (** [add x s] returns a set containing all elements of [s],
       plus [x]. If [x] was already in [s], [s] is returned unchanged. *)
@@ -231,6 +270,13 @@ sig
 
     @raise Not_found if the set is empty. *)
 
+  val min_elt_opt : t -> elt option
+  (** Return [Some e] for the smallest element [e] of the given set
+      (with respect to the [Ord.compare] ordering).
+      Return None if the set is empty. 
+   
+      @since NEXT_RELEASE *)
+
   val pop_min: t -> elt * t
   (** Returns the smallest element of the given set
       along with the rest of the set.
@@ -254,12 +300,26 @@ sig
   val max_elt: t -> elt
   (** Same as {!Set.S.min_elt}, but returns the largest element of the
       given set. *)
+    
+  val max_elt_opt : t -> elt option
+  (** Same as {!Set.S.min_elt_opt}, but for the largest element of the
+      given set.
+
+      @since NEXT_RELEASE *)
 
   val choose: t -> elt
   (** Return one element of the given set.
       Which element is chosen is unspecified, but equal elements will be
       chosen for equal sets.
       @raise Not_found if the set is empty. *)
+
+  val choose_opt : t -> elt option
+  (** Return [Some e] for one element [e] of the given set.
+      Which element is chosen is unspecified, but equal elements will be
+      chosen for equal sets.
+      Return [None] if the set is empty.
+
+      @since NEXT_RELEASE *)
 
   val any: t -> elt
   (** Return one element of the given set.
@@ -296,7 +356,31 @@ sig
   (** builds a set from the given array.
 
       @since 2.4
-  *)
+   *)
+
+
+  val to_seq : t -> elt Seq.t
+  (** Iterate on the whole set, in ascending order.
+
+      @since NEXT_RELEASE  *)
+    
+  val to_seq_from :  elt -> t -> elt Seq.t
+  (** [to_seq_from x s] iterates on a subset of the elements in [s], 
+      namely those greater or equal to [x], in ascending order.
+    
+      @since NEXT_RELEASE *)
+    
+  val add_seq : elt Seq.t -> t -> t
+  (** add the given elements to the set, in order. 
+    
+      @since NEXT_RELEASE  *)
+    
+  val of_seq : elt Seq.t -> t
+  (** build a set from the given elements 
+    
+      @since NEXT_RELEASE *)
+     
+
 
 
   (** {6 Boilerplate code}*)

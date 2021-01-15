@@ -259,14 +259,28 @@ sig
       The returned enumeration is sorted in increasing key order. *)
 
   val min_binding : 'a t -> (key * 'a)
-  (** Return the [(key, value)] pair with the smallest key. *)
+  (** Return the [(key, value)] pair with the smallest key.
+      Raises Not_found if the map is empty.  *)
+    
+  val min_binding_opt : 'a t -> (key * 'a) option
+  (** Return [Some (key, value)] for the [key, value] pair with 
+      the smallest key, or [None] if the map is empty.
+    
+      @since NEXT_RELEASE  *)
 
   val pop_min_binding : 'a t -> (key * 'a) * 'a t
   (** Return the [(key, value)] pair with the smallest key
       along with the rest of the map. *)
 
   val max_binding : 'a t -> (key * 'a)
-  (** Return the [(key, value)] pair with the largest key. *)
+  (** Return the [(key, value)] pair with the largest key. 
+      Raises Not_found if the map is empty.  *)
+    
+  val max_binding_opt :  'a t -> (key * 'a)
+  (** Return [Some (key, value)] for the [key, value] pair with 
+      the largest key, or [None] if the map is empty. 
+    
+      @since NEXT_RELEASE *)
 
   val pop_max_binding : 'a t -> (key * 'a) * 'a t
   (** Return the ([key, value]) pair with the largest key
@@ -283,6 +297,14 @@ sig
       chosen for equal maps.
       @raise Not_found if the map is empty
   *)
+
+  val choose_opt : 'a t -> (key * 'a) option
+  (** Return [Some (k, v)] for one binding [(k, v)] of the given map,
+     if the map is not empty. Else, return None.  Which binding is
+     chosen is unspecified, but equal bindings will be chosen for
+     equal maps.
+
+     @since NEXT_RELEASE *)
 
   val any : 'a t -> (key * 'a)
   (** Return one binding of the given map.
@@ -352,6 +374,39 @@ sig
       and of [m2]. The presence of each such binding, and the corresponding
       value, is determined with the function [f].
   *)
+
+  val union:
+    (key -> 'a -> 'a -> 'a option) -> 'a t -> 'a t -> 'a t
+  (** [union f m1 m2] computes a map whose keys are a subset of the keys of 
+      [m1] and of [m2]. When the same binding is defined in both arguments,
+      the function f is used to combine them.
+      This function is similar to [merge], except [f] is only called if a key
+      is present in both [m1] and [m2]. If a key is present in either [m1]
+      or [m2] but not in both, it (and the corresponding value) will be 
+      present in the resulting map.
+    
+      @since NEXT_RELEASE *)
+
+  val to_seq : 'a t -> (key * 'a) Seq.t
+  (** Iterate on the whole map, in ascending order of keys.
+
+      @since NEXT_RELEASE  *)
+    
+  val to_seq_from :  key -> 'a t -> (key * 'a) Seq.t
+  (** [to_seq_from k m] iterates on a subset of the bindings in [m], 
+      namely those bindings greater or equal to [k], in ascending order. 
+    
+      @since NEXT_RELEASE *)
+    
+  val add_seq : (key * 'a) Seq.t -> 'a t -> 'a t
+  (** add the given bindings to the map, in order. 
+    
+      @since NEXT_RELEASE  *)
+    
+  val of_seq : (key * 'a) Seq.t -> 'a t
+  (** build a map from the given bindings 
+    
+      @since NEXT_RELEASE *)
 
   (** {6 Boilerplate code}*)
 
@@ -596,6 +651,15 @@ val choose : ('key, 'a) t -> ('key * 'a)
     @raise Not_found if the map is empty
 *)
 
+val choose_opt : ('key, 'a) t -> ('key * 'a) option
+(** Return [Some (k, v)] for one binding [(k, v)] of the given map,
+    if the map is not empty. Else, return None.
+    Which binding is chosen is unspecified, but equal bindings will be
+    chosen for equal maps.
+
+    @since NEXT_RELEASE *)
+
+  
 val any : ('key, 'a) t -> ('key * 'a)
 (** Return one binding of the given map.
     The difference with choose is that there is no guarantee that equals
