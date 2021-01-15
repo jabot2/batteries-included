@@ -41,8 +41,6 @@ module Stdlib_verifications = struct
        val find_map : ('a -> 'b option) -> 'a list -> 'b
      end)
   module Seq = (Seq : module type of Legacy.Seq)
-  module Map = (Map : module type of Legacy.Map)
-  module Set = (Set : module type of Legacy.Set)
   module Marshal =
     (Marshal: sig
        include module type of Legacy.Marshal
@@ -111,4 +109,59 @@ module Stdlib_verifications = struct
   module Big_int = (Big_int : module type of Legacy.Big_int)
   (* FIXME: This does not pass for some reason:
   module Bigarray = (Bigarray : module type of Legacy.Bigarray)*)
+
+  (* test compatibility of BatSet.S with Legacy.Set.S *)
+  let sort (type s) (module Set : Legacy.Set.S with type elt = s) l =
+  Set.elements (List.fold_right Set.add l Set.empty)
+
+module IntSet = struct
+  include BatSet.Int
+  (* uncomment to make test pass - just to prove that this tests the right thing
+  
+  let to_seq _ = failwith "unimplemented"
+  let of_seq _ = failwith "unimplemented"
+  let add_seq _ = failwith "unimplemented"
+  let to_seq_from _ _ = failwith "unimplemented"
+  let union _f _m1 _m2 = failwith "unimplemented"
+  let find_first _ = failwith "unimplemented"
+  let find_first_opt _ = failwith "unimplemented"
+  let find_last _ = failwith "unimplemented"
+  let find_last_opt _ = failwith "unimplemented"
+  let find_opt _ = failwith "unimplemented"
+  let choose_opt _ = failwith "unimplemented"
+  let max_elt_opt _ = failwith "unimplemented"
+  let min_elt_opt _ = failwith "unimplemented"
+  let union _ = failwith "unimplemented"
+  *)
+end 
+
+let _ = assert ([1;2;3] = (sort (module IntSet) [3; 1; 2;]))
+   
+  (* test compatibility of BatMap.S with Legacy.Map.S *)
+let sort_map (type s) (module Map : Legacy.Map.S with type key = s) l =
+  Map.bindings (List.fold_right (fun x m -> Map.add x x m) l Map.empty)
+
+module IntMap = struct
+  include BatMap.Int
+  (* uncomment to make test pass - just to prove that this tests the right thing
+  let to_seq _ = failwith "unimplemented"
+  let of_seq _ = failwith "unimplemented"
+  let add_seq _ = failwith "unimplemented"
+  let to_seq_from _ _ = failwith "unimplemented"
+  let union _f _m1 _m2 = failwith "unimplemented"
+  let find_first _ = failwith "unimplemented"
+  let find_first_opt _ = failwith "unimplemented"
+  let find_last _ = failwith "unimplemented"
+  let find_last_opt _ = failwith "unimplemented"
+  let find_opt _ = failwith "unimplemented"
+  let choose_opt _ = failwith "unimplemented"
+  let max_binding_opt _ = failwith "unimplemented"
+  let min_binding_opt _ = failwith "unimplemented"
+  let union _ = failwith "unimplemented"
+  let update _ = failwith "unimplemented"
+  *)
+end 
+
+let _ = assert ([1,1;2,2;3,3;] = (sort_map (module IntMap) [3; 1; 2;]))
+
 end
