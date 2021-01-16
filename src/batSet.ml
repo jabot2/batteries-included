@@ -542,6 +542,11 @@ sig
   val singleton: elt -> t
   val mem: elt -> t -> bool
   val find: elt -> t -> elt
+  val find_opt: elt -> t -> elt option
+  val find_first : (elt -> bool) -> t -> elt
+  val find_first_opt : (elt -> bool) -> t -> elt option
+  val find_last : (elt -> bool) -> t -> elt
+  val find_last_opt : (elt -> bool) -> t -> elt option
   val add: elt -> t -> t
   val remove: elt -> t -> t
   val remove_exn: elt -> t -> t
@@ -573,10 +578,13 @@ sig
   val to_list: t -> elt list
   val to_array: t -> elt array
   val min_elt: t -> elt
+  val min_elt_opt: t -> elt option
   val pop_min: t -> elt * t
   val pop_max: t -> elt * t
   val max_elt: t -> elt
+  val max_elt_opt: t -> elt option
   val choose: t -> elt
+  val choose_opt: t -> elt option
   val any: t -> elt
   val pop: t -> elt * t
   val enum: t -> elt BatEnum.t
@@ -584,6 +592,10 @@ sig
   val of_enum: elt BatEnum.t -> t
   val of_list: elt list -> t
   val of_array: elt array -> t
+  val to_seq : t -> elt Seq.t
+  val to_seq_from :  elt -> t -> elt Seq.t
+  val add_seq : elt Seq.t -> t -> t
+  val of_seq : elt Seq.t -> t
   val print :  ?first:string -> ?last:string -> ?sep:string ->
     ('a BatInnerIO.output -> elt -> unit) ->
     'a BatInnerIO.output -> t -> unit

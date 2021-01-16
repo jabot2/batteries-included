@@ -98,6 +98,12 @@ val flatten : 'a t t -> 'a t
 val nil : 'a t
 (** [nil = fun () -> Nil] *)
 
+val empty : 'a t
+(** the empty sequence, containing no elements *)
+
+val return : 'a -> 'a t
+(** the singleton sequence, containing only the given element *)
+
 val cons : 'a -> 'a t -> 'a t
 (** [cons e s = fun () -> Cons(e, s)] *)
 
@@ -123,6 +129,10 @@ val unfold : ('b -> ('a * 'b) option) -> 'b -> 'a t
 
     @since NEXT_RELEASE *)
 
+val flat_map : ('a -> 'b t) -> 'a t -> 'b t
+(** Map each element to a subsequence, then return each element of this
+    sub-sequence in turn. This transformation is lazy, it only applies
+    when the result is traversed. *)
 
 (** {6 Iterators} *)
 

@@ -75,7 +75,7 @@ sig
       @raise Not_found if no element is equal
   *)
 
-  val find_opt : unit
+  val find_opt : elt -> t -> elt option
   (** [find x s] returns [Some k] for the element [k] in [s] that
       tests equal to [x] under its comparison function.
       If no element is equal, return [None]

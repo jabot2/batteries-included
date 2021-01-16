@@ -138,6 +138,14 @@ let of_list l =
   in
   aux l
 
+let empty = fun () -> Nil
+
+let return x = 
+    of_list [x]
+
+let unfold _f _u = failwith "unimplemented"
+let flat_map f s = failwith "unimplemented"
+
 let rec iter f s = match s () with
   | Nil -> ()
   | Cons(e, s) -> f e; iter f s

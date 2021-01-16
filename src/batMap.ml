@@ -105,6 +105,10 @@ module Concrete = struct
     | Node (l, _, _, _, _) -> min_binding l
     | Empty -> raise Not_found
 
+  let min_binding_opt m =
+    try Some (min_binding m)
+    with Not_found -> None
+
   let get_root = function
     | Empty -> raise Not_found
     | Node (_, k, v, _, _) -> k, v
@@ -123,6 +127,10 @@ module Concrete = struct
     | Node (_, k, v, Empty, _) -> k, v
     | Node (_, _, _, r, _) -> max_binding r
     | Empty -> invalid_arg "PMap.max_binding: empty tree"
+
+  let max_binding_opt m =
+    try Some (max_binding m)
+    with Not_found -> None
 
   let pop_max_binding s =
     let maxi = ref (get_root s) in
@@ -276,7 +284,7 @@ module Concrete = struct
     in
     loop map
 
-  let update k1 k2 v2 cmp map =
+  let update_old k1 k2 v2 cmp map =
     if cmp k1 k2 <> 0 then
       add k2 v2 cmp (remove_exn k1 cmp map)
     else
@@ -292,6 +300,8 @@ module Concrete = struct
             Node(l, k, v, loop r, h)
       in
       loop map
+
+  let update k f cmp m = failwith "unimplemented"
 
   let mem x cmp map =
     let rec loop = function
@@ -800,6 +810,12 @@ module Concrete = struct
         | Some v2 -> add k (f v1 v2) cmp1 m)
         m1 empty
 
+  let to_seq _ = failwith "unimplemented"
+  let of_seq _ = failwith "unimplemented"
+  let add_seq _ = failwith "unimplemented"
+  let to_seq_from _ _ = failwith "unimplemented"
+  let union_stdlib _f _m1 _m2 = failwith "unimplemented"
+    
   let compare ckey cval m1 m2 =
     BatEnum.compare (fun (k1,v1) (k2,v2) -> BatOrd.bin_comp ckey k1 k2 cval v1 v2) (enum m1) (enum m2)
   let equal ckey eq_val m1 m2 =
@@ -816,7 +832,8 @@ sig
   val is_empty: 'a t -> bool
   val cardinal: 'a t -> int
   val add: key -> 'a -> 'a t -> 'a t
-  val update: key -> key -> 'a -> 'a t -> 'a t
+  val update : key -> ('a option -> 'a option) -> 'a t -> 'a t
+  val update_old: key -> key -> 'a -> 'a t -> 'a t
   val find: key -> 'a t -> 'a
   val find_opt: key -> 'a t -> 'a option
   val find_default: 'a -> key -> 'a t -> 'a
@@ -844,8 +861,10 @@ sig
   val keys : _ t -> key BatEnum.t
   val values: 'a t -> 'a BatEnum.t
   val min_binding : 'a t -> (key * 'a)
+  val min_binding_opt : 'a t -> (key * 'a) option
   val pop_min_binding: 'a t -> (key * 'a) * 'a t
-  val max_binding : 'a t -> (key * 'a)
+  val max_binding : 'a t -> (key * 'a)    
+  val max_binding_opt : 'a t -> (key * 'a) option
   val pop_max_binding: 'a t -> (key * 'a) * 'a t
   val choose : 'a t -> (key * 'a)
   val choose_opt : 'a t -> (key * 'a) option
@@ -861,6 +880,12 @@ sig
   val exists: (key -> 'a -> bool) -> 'a t -> bool
   val merge:
     (key -> 'a option -> 'b option -> 'c option) -> 'a t -> 'b t -> 'c t
+  val union:
+    (key -> 'a -> 'a -> 'a option) -> 'a t -> 'a t -> 'a t
+  val to_seq : 'a t -> (key * 'a) Seq.t
+  val to_seq_from :  key -> 'a t -> (key * 'a) Seq.t
+  val add_seq : (key * 'a) Seq.t -> 'a t -> 'a t
+  val of_seq : (key * 'a) Seq.t -> 'a t
   (** {6 Boilerplate code}*)
   (** {7 Printing}*)
   val print :  ?first:string -> ?last:string -> ?sep:string -> ?kvsep:string ->
@@ -922,7 +947,8 @@ struct
   let backwards t = Concrete.backwards (impl_of_t t)
   let keys t = Concrete.keys (impl_of_t t)
   let values t = Concrete.values (impl_of_t t)
-  let update k1 k2 v2 t = t_of_impl (Concrete.update k1 k2 v2 Ord.compare (impl_of_t t))
+  let update_old k1 k2 v2 t = t_of_impl (Concrete.update_old k1 k2 v2 Ord.compare (impl_of_t t))
+  let update k f t = t_of_impl (Concrete.update t f Ord.compare (impl_of_t t))
   let find_default d k t = Concrete.find_default d k Ord.compare (impl_of_t t)
   let find_opt k t = Concrete.find_option k Ord.compare (impl_of_t t)
   let find_first     f t = Concrete.find_first     f (impl_of_t t)
@@ -1052,7 +1078,7 @@ let is_empty x = x = Concrete.Empty
 
 let add x d m = Concrete.add x d Pervasives.compare m
 
-let update k1 k2 v2 m = Concrete.update k1 k2 v2 Pervasives.compare m
+let update k1 k2 v2 m = Concrete.update_old k1 k2 v2 Pervasives.compare m
 
 let find x m = Concrete.find x Pervasives.compare m
 
@@ -1168,8 +1194,16 @@ let choose_opt = Concrete.choose_opt
 let any = Concrete.any
 let max_binding = Concrete.max_binding
 let min_binding = Concrete.min_binding
+let max_binding_opt = Concrete.max_binding_opt
+let min_binding_opt = Concrete.min_binding_opt
 let pop_min_binding = Concrete.pop_min_binding
 let pop_max_binding = Concrete.pop_max_binding
+
+let of_seq = Concrete.of_seq
+let add_seq = Concrete.add_seq
+let to_seq = Concrete.to_seq
+let to_seq_from = Concrete.to_seq_from
+let union_stdlib = Concrete.union_stdlib
 
 let singleton k v = Concrete.singleton k v
 
@@ -1400,6 +1434,8 @@ module PMap = struct (*$< PMap *)
 
   let max_binding t = Concrete.max_binding t.map
   let min_binding t = Concrete.min_binding t.map
+  let max_binding_opt t = Concrete.max_binding_opt t.map
+  let min_binding_opt t = Concrete.min_binding_opt t.map
   let pop_min_binding m =
     let mini, rest = Concrete.pop_min_binding m.map in
     (mini, { m with map = rest })
@@ -1421,6 +1457,7 @@ module PMap = struct (*$< PMap *)
   let cardinal m = Concrete.cardinal m.map
 
   let choose m = Concrete.choose m.map
+  let choose_opt m = Concrete.choose_opt m.map
   let any m = Concrete.any m.map
 
   let split k m =
@@ -1466,6 +1503,12 @@ module PMap = struct (*$< PMap *)
 
   let merge_unsafe f m1 m2 =
     { m1 with map = Concrete.merge f m1.cmp m1.map m2.map }
+    
+  let of_seq _ = failwith "unimplemented" 
+  let add_seq _ _ =  failwith "unimplemented" 
+  let to_seq _ = failwith "unimplemented" 
+  let to_seq_from _ _ = failwith "unimplemented"
+  let union_stdlib _ _ _ = failwith "unimplemented" 
 
   let bindings m =
     Concrete.bindings m.map

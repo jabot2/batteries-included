@@ -90,14 +90,17 @@ sig
       [m], plus a binding of [x] to [y]. If [x] was already bound
       in [m], its previous binding disappears. *)
 
-  val update: key -> key -> 'a -> 'a t -> 'a t
-  (** [update k1 k2 v2 m] replace the previous binding of [k1] in [m] by
+  val update : key -> ('a option -> 'a option) -> 'a t -> 'a t
+  (* from stdlib?? *)
+
+  val update_old: key -> key -> 'a -> 'a t -> 'a t
+  (** [update_old k1 k2 v2 m] replace the previous binding of [k1] in [m] by
       [k2] associated to [v2].
       This is equivalent to [add k2 v2 (remove k1) m], but more efficient
       in the case where [k1] and [k2] have the same key ordering.
       @raise Not_found if [k1] is not bound in [m].
       @since 2.4.0 *)
-
+    
   val find: key -> 'a t -> 'a
   (** [find x m] returns the current binding of [x] in [m],
       or raises [Not_found] if no such binding exists. *)
@@ -276,7 +279,7 @@ sig
   (** Return the [(key, value)] pair with the largest key. 
       Raises Not_found if the map is empty.  *)
     
-  val max_binding_opt :  'a t -> (key * 'a)
+  val max_binding_opt :  'a t -> (key * 'a) option
   (** Return [Some (key, value)] for the [key, value] pair with 
       the largest key, or [None] if the map is empty. 
     
@@ -679,13 +682,27 @@ val split : 'key -> ('key, 'a) t -> (('key, 'a) t * 'a option * ('key, 'a) t)
 *)
 
 val min_binding : ('key, 'a) t -> ('key * 'a)
-(** Returns the binding with the smallest key. *)
+(** Returns the binding with the smallest key.
+    Raises Not_found if the map is empty.  *)
+    
+val min_binding_opt : ('key, 'a) t -> ('key * 'a) option
+(** Return [Some (key, value)] for the [key, value] pair with 
+    the smallest key, or [None] if the map is empty.
+    
+    @since NEXT_RELEASE  *)
 
 val pop_min_binding : ('key, 'a) t -> ('key * 'a) * ('key, 'a) t
 (** Returns the binding with the smallest key along with the rest of the map. *)
 
 val max_binding : ('key, 'a) t -> ('key * 'a)
-(** Returns the binding with the largest key. *)
+(** Return the [(key, value)] pair with the largest key. 
+    Raises Not_found if the map is empty.  *)
+    
+val max_binding_opt :  ('key, 'a) t -> ('key * 'a) option
+(** Return [Some (key, value)] for the [key, value] pair with 
+    the largest key, or [None] if the map is empty. 
+    
+    @since NEXT_RELEASE *)
 
 val pop_max_binding : ('key, 'a) t -> ('key * 'a) * ('key, 'a) t
 (** Returns the binding with the largest key along with the rest of the map. *)
@@ -760,6 +777,41 @@ val union : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
     [m1]. In case of conflicted bindings, [m2]'s bindings override
     [m1]'s. Equivalent to [foldi add m2 m1].
     The resulting map uses the comparison function of [m1]. *)
+
+val union_stdlib:
+  ('key -> 'a -> 'a -> 'a option) -> ('key, 'a) t -> ('key, 'a) t -> ('key, 'a) t
+(** [union_stdlib f m1 m2] computes a map whose keys are a subset of the keys of 
+    [m1] and of [m2]. When the same binding is defined in both arguments,
+    the function f is used to combine them.
+    This function is similar to [merge], except [f] is only called if a key
+    is present in both [m1] and [m2]. If a key is present in either [m1]
+    or [m2] but not in both, it (and the corresponding value) will be 
+    present in the resulting map.
+
+    This is the union method from the stdlib map, renamed for backwards compatibility.
+    
+    @since NEXT_RELEASE *)
+
+val to_seq : ('key, 'a) t -> ('key * 'a) Seq.t
+(** Iterate on the whole map, in ascending order of keys.
+    
+    @since NEXT_RELEASE  *)
+  
+val to_seq_from :  'key -> ('key, 'a) t -> ('key * 'a) Seq.t
+(** [to_seq_from k m] iterates on a subset of the bindings in [m], 
+    namely those bindings greater or equal to [k], in ascending order. 
+    
+    @since NEXT_RELEASE *)
+  
+val add_seq : ('key * 'a) Seq.t -> ('key, 'a) t -> ('key, 'a) t
+(** add the given bindings to the map, in order. 
+    
+    @since NEXT_RELEASE  *)
+  
+val of_seq : ('key * 'a) Seq.t -> ('key, 'a) t
+(** build a map from the given bindings 
+    
+    @since NEXT_RELEASE *)
 
 val diff :  ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
 (** [diff m1 m2] removes all bindings of keys found in [m2] from [m1],
@@ -1006,6 +1058,14 @@ module PMap : sig
       Which binding is chosen is unspecified, but equal bindings will be chosen
       for equal maps.
       @raise Not_found if the map is empty. *)
+    
+  val choose_opt : ('key, 'a) t -> ('key * 'a) option
+  (** Return [Some (k, v)] for one binding [(k, v)] of the given map,
+     if the map is not empty. Else, return None.  Which binding is
+     chosen is unspecified, but equal bindings will be chosen for
+     equal maps.
+
+     @since NEXT_RELEASE *)
 
   val any : ('key, 'a) t -> ('key * 'a)
   (** Return one binding of the given map.
@@ -1027,12 +1087,24 @@ module PMap : sig
 
   val min_binding : ('key, 'a) t -> ('key * 'a)
   (** Returns the binding with the smallest key. *)
+    
+  val min_binding_opt : ('key, 'a) t -> ('key * 'a) option
+  (** Return [Some (key, value)] for the [key, value] pair with 
+      the smallest key, or [None] if the map is empty.
+    
+      @since NEXT_RELEASE  *)
 
   val pop_min_binding : ('key, 'a) t -> ('key * 'a) * ('key, 'a) t
   (** Return the binding with the smallest key along with the rest of the map. *)
 
   val max_binding : ('key, 'a) t -> ('key * 'a)
   (** Returns the binding with the largest key. *)
+
+  val max_binding_opt :  ('key, 'a) t -> ('key * 'a) option
+  (** Return [Some (key, value)] for the [key, value] pair with 
+      the largest key, or [None] if the map is empty. 
+    
+      @since NEXT_RELEASE *)
 
   val pop_max_binding : ('key, 'a) t -> ('key * 'a) * ('key, 'a) t
   (** Return the binding with the largest key along with the rest of the map. *)
@@ -1135,6 +1207,42 @@ module PMap : sig
       are equal. If it's not the case, the result is a map using the
       comparison function of its first parameter, but which ['b option]
       elements are passed to the function is unspecified. *)
+
+  val union_stdlib:
+    ('key -> 'a -> 'a -> 'a option) -> ('key, 'a) t -> ('key, 'a) t -> ('key, 'a) t
+  (** [union f m1 m2] computes a map whose keys are a subset of the keys of 
+      [m1] and of [m2]. When the same binding is defined in both arguments,
+      the function f is used to combine them.
+      This function is similar to [merge], except [f] is only called if a key
+      is present in both [m1] and [m2]. If a key is present in either [m1]
+      or [m2] but not in both, it (and the corresponding value) will be 
+      present in the resulting map.
+
+      This is the union method from the stdlib map, renamed for backwards compatibility.
+
+      @since NEXT_RELEASE *)
+
+  val to_seq : ('key, 'a) t -> ('key * 'a) Seq.t
+  (** Iterate on the whole map, in ascending order of keys.
+
+      @since NEXT_RELEASE  *)
+    
+  val to_seq_from : 'key -> ('key, 'a) t -> ('key * 'a) Seq.t
+  (** [to_seq_from k m] iterates on a subset of the bindings in [m], 
+      namely those bindings greater or equal to [k], in ascending order. 
+    
+      @since NEXT_RELEASE *)
+    
+  val add_seq : ('key * 'a) Seq.t -> ('key, 'a) t -> ('key, 'a) t
+  (** add the given bindings to the map, in order. 
+    
+      @since NEXT_RELEASE  *)
+    
+  val of_seq : ('key * 'a) Seq.t -> ('key, 'a) t
+  (** build a map from the given bindings 
+    
+      @since NEXT_RELEASE *)
+
 
   val compare: ('b -> 'b -> int) -> ('a,'b) t -> ('a, 'b) t -> int
   val equal : ('b -> 'b -> bool) -> ('a,'b) t -> ('a, 'b) t -> bool
