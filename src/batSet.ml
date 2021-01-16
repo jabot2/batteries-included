@@ -603,10 +603,10 @@ module Concrete = struct
     add_seq cmp s empty
     
   let to_seq m =
-    BatSeq.of_list (elements m) (* TODO: optimize *)
+    BatSeq.of_list (elements m)
     
   let to_seq_from cmp k m =
-    to_seq (filter cmp (fun x -> cmp x k >= 0) m) (* TODO: optimize *)
+    to_seq (filter cmp (fun x -> cmp x k >= 0) m)
   
 
 end
@@ -1036,6 +1036,48 @@ let find_last_opt  f s = Concrete.find_last_opt  f s
   let x,y = (1,1),(1,1) in find x (singleton y) == y
   let x,y = [|0|],[|0|] in find x (singleton y) != x
   try ignore (find (1,2) (singleton (1,1))); false with Not_found -> true
+ *)
+
+(*$T find_opt
+  (find_opt 1 (of_list [1;2;3;4;5;6;7;8])) = Some 1
+  (find_opt 8 (of_list [1;2;3;4;5;6;7;8])) = Some 8
+  (find_opt (1,2) (singleton (1,1))) = None
+*)
+
+(*$T find_first
+            (empty |> add 1 |> add 2 |> add 3 |> find_first (fun x -> x >= 0)) = 1
+            (empty |> add 1 |> add 2 |> add 3 |> find_first (fun x -> x >= 1)) = 1
+            (empty |> add 1 |> add 2 |> add 3 |> find_first (fun x -> x >= 2)) = 2
+            (empty |> add 1 |> add 2 |> add 3 |> find_first (fun x -> x >= 3)) = 3
+  try ignore(empty |> add 1 |> add 2 |> add 3 |> find_first (fun x -> x >= 4)); false with Not_found -> true
+  try ignore(empty |>                            find_first (fun x -> x >= 3)); false with Not_found -> true
+*)
+
+(*$T find_first_opt
+  (empty |> add 1 |> add 2 |> add 3 |> find_first_opt (fun x -> x >= 0)) = (Some 1)
+  (empty |> add 1 |> add 2 |> add 3 |> find_first_opt (fun x -> x >= 1)) = (Some 1)
+  (empty |> add 1 |> add 2 |> add 3 |> find_first_opt (fun x -> x >= 2)) = (Some 2)
+  (empty |> add 1 |> add 2 |> add 3 |> find_first_opt (fun x -> x >= 3)) = (Some 3)
+  (empty |> add 1 |> add 2 |> add 3 |> find_first_opt (fun x -> x >= 4)) = (None)
+  (empty |>                            find_first_opt (fun x -> x >= 3)) = (None)
+*)
+
+(*$T find_last
+            (empty |> add 1 |> add 2 |> add 3 |> find_last (fun x -> x <= 1)) = 1
+            (empty |> add 1 |> add 2 |> add 3 |> find_last (fun x -> x <= 2)) = 2
+            (empty |> add 1 |> add 2 |> add 3 |> find_last (fun x -> x <= 3)) = 3
+            (empty |> add 1 |> add 2 |> add 3 |> find_last (fun x -> x <= 4)) = 3
+  try ignore(empty |> add 1 |> add 2 |> add 3 |> find_last (fun x -> x <= 0)); false with Not_found -> true
+  try ignore(empty |>                            find_last (fun x -> x <= 3)); false with Not_found -> true
+*)
+
+(*$T find_last_opt
+  (empty |> add 1 |> add 2 |> add 3 |> find_last_opt (fun x -> x <= 0)) = None
+  (empty |> add 1 |> add 2 |> add 3 |> find_last_opt (fun x -> x <= 1)) = Some 1
+  (empty |> add 1 |> add 2 |> add 3 |> find_last_opt (fun x -> x <= 2)) = Some 2
+  (empty |> add 1 |> add 2 |> add 3 |> find_last_opt (fun x -> x <= 3)) = Some 3
+  (empty |> add 1 |> add 2 |> add 3 |> find_last_opt (fun x -> x <= 4)) = Some 3
+  (empty |>                            find_last_opt (fun x -> x <= 3)) = None
 *)
 
 let add x s  = Concrete.add Pervasives.compare x s
@@ -1082,6 +1124,13 @@ let to_array s = Concrete.to_array s
 
 let choose s = Concrete.choose s
 let choose_opt s = Concrete.choose_opt s
+
+(*$T choose_opt
+  choose_opt (of_list [1]) = Some 1
+  choose_opt (empty) = None
+  choose_opt (of_list []) = None
+*)
+
 let any s = Concrete.any s
 
 let min_elt s = Concrete.min_elt s
@@ -1099,6 +1148,12 @@ let min_elt_opt s = Concrete.min_elt_opt s
     done; \
     for_all (fun (x,_) -> x <> 0) !s \
   )
+*)
+
+(*$T min_elt_opt
+  min_elt_opt (of_list [1;2;3]) = Some 1
+  min_elt_opt (empty) = None
+  min_elt_opt (of_list []) = None
 *)
 
 let pop_min s = Concrete.pop_min s
@@ -1123,6 +1178,12 @@ let pop_max s = Concrete.pop_max s
 let max_elt s = Concrete.max_elt s
 
 let max_elt_opt s = Concrete.max_elt_opt s
+
+(*$T max_elt_opt
+  max_elt_opt (of_list [1;2;3]) = Some 3
+  max_elt_opt (empty) = None
+  max_elt_opt (of_list []) = None
+*)
 
 let enum s = Concrete.enum s
 
@@ -1175,7 +1236,29 @@ let to_seq t =
 let to_seq_from k t =
   Concrete.to_seq_from Pervasives.compare k t
 
-                   
+(*$T add_seq
+  equal (of_list [1;2;3;4]) (add_seq (BatSeq.of_list [1;2]) (of_list [3;4]))
+  equal (of_list [3;4]) (add_seq (BatSeq.of_list []) (of_list [3;4]))
+  equal (of_list [1;2]) (add_seq (BatSeq.of_list [1;2]) (of_list []))
+ *)
+
+(*$T of_seq
+  equal (of_list [1;2;3;4]) (of_seq (BatSeq.of_list [1;2;4;3]))
+  equal (of_list []) (of_seq (BatSeq.of_list []))
+ *)
+
+(*$T to_seq
+  BatSeq.equal (BatSeq.of_list [1;2;3;4]) (to_seq (of_list [4;1;3;2]))
+  BatSeq.equal (BatSeq.of_list []) (to_seq (of_list []))
+ *)
+
+(*$T to_seq_from
+  BatSeq.equal (BatSeq.of_list [1;2;3;4]) (to_seq_from 0 (of_list [4;1;3;2]))
+  BatSeq.equal (BatSeq.of_list [3;4]) (to_seq_from 3 (of_list [4;1;3;2]))
+  BatSeq.equal (BatSeq.of_list []) (to_seq_from 5 (of_list [4;1;3;2]))
+  BatSeq.equal (BatSeq.of_list []) (to_seq_from 5 (of_list []))
+ *)
+
 (*$T subset
    subset (of_list [1;2;3]) (of_list [1;2;3;4])
    not (subset (of_list [1;2;3;5]) (of_list [1;2;3;4]))
