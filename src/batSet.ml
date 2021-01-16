@@ -992,9 +992,9 @@ module PSet = struct (*$< PSet *)
 
                      
   let add_seq s t =
-    Concrete.add_seq t.cmp s t.set
+    { t with set = Concrete.add_seq t.cmp s t.set }
     
-  let of_seq  ?(cmp = compare) s =
+  let of_seq  ?(cmp = Pervasives.compare) s =
     {set = Concrete.of_seq cmp s; cmp = cmp }
     
   let to_seq t =
@@ -1020,7 +1020,7 @@ let mem x s = Concrete.mem Pervasives.compare x s
 
 let find x s = Concrete.find Pervasives.compare x s
 
-let find_opt x s = Concrete.find Pervasives.compare x s
+let find_opt x s = Concrete.find_opt Pervasives.compare x s
 
 let find_first f s = Concrete.find_first f s
 let find_last  f s = Concrete.find_last  f s
