@@ -85,6 +85,11 @@ module Concrete = struct
     | Node(Empty, v, r, _) -> v
     | Node(l, v, r, _) -> min_elt l
 
+  let rec min_elt_opt = function
+      Empty -> None
+    | Node(Empty, v, r, _) -> Some v
+    | Node(l, v, r, _) -> min_elt_opt l
+
   let get_root = function
     | Empty -> raise Not_found
     | Node(_l, v, _r, _) -> v
@@ -113,6 +118,11 @@ module Concrete = struct
       Empty -> raise Not_found
     | Node(l, v, Empty, _) -> v
     | Node(l, v, r, _) -> max_elt r
+
+  let rec max_elt_opt = function
+      Empty -> None
+    | Node(l, v, Empty, _) -> Some v
+    | Node(l, v, r, _) -> max_elt_opt r
 
   (* Remove the smallest element of the given set *)
   let rec remove_min_elt = function
@@ -191,6 +201,58 @@ module Concrete = struct
     | Node(l, v, r, _) ->
       let c = cmp x v in
       if c = 0 then v else  find cmp x (if c < 0 then l else r)
+
+  let rec find_opt cmp x = function
+      Empty -> None
+    | Node(l, v, r, _) ->
+      let c = cmp x v in
+      if c = 0 then Some v else find_opt cmp x (if c < 0 then l else r)
+
+  let rec find_first_helper_found k0 f = function
+    | Empty -> k0
+    | Node (l, k, r, _) ->
+       if f k
+       then find_first_helper_found k f l
+       else find_first_helper_found k0 f r
+
+  let rec find_first f m =
+    match m with
+    | Empty -> raise Not_found
+    | Node (l, k, r, _) ->
+       if f k
+       then find_first_helper_found k f l
+       else find_first f r
+
+  let rec find_first_opt f m =
+    match m with
+    | Empty -> None
+    | Node (l, k, r, _) ->
+       if f k
+       then Some (find_first_helper_found k f l)
+       else find_first_opt f r
+
+  let rec find_last_helper_found k0 f = function
+    | Empty -> k0
+    | Node (l, k, r, _) ->
+       if f k
+       then find_last_helper_found k f r
+       else find_last_helper_found k0 f l
+
+  let rec find_last f m =
+    match m with 
+    | Empty -> raise Not_found
+    | Node (l, k, r, _) ->
+       if f k
+       then find_last_helper_found k f r
+       else find_last f l
+
+  let rec find_last_opt f m =
+    match m with 
+    | Empty -> None
+    | Node (l, k, r, _) ->
+       if f k
+       then Some (find_last_helper_found k f r)
+       else find_last_opt f l
 
   let rec iter f = function
       Empty -> ()
@@ -403,7 +465,9 @@ module Concrete = struct
   (*$= choose
     42 (empty |> add 42 |> choose)
     (empty |> add 0 |> add 1 |> choose) (empty |> add 1 |> add 0 |> choose)
-  *)
+   *)
+
+  let choose_opt = min_elt_opt
 
   let any = get_root
   (*$T any
@@ -531,6 +595,20 @@ module Concrete = struct
         subset cmp (Node (l1, v1, Empty, 0)) l2 && subset cmp r1 t2
       else
         subset cmp (Node (Empty, v1, r1, 0)) r2 && subset cmp l1 t2
+
+  let add_seq cmp s m =
+    Seq.fold_left (fun m e -> add cmp e m) m s
+    
+  let of_seq cmp s =
+    add_seq cmp s empty
+    
+  let to_seq m =
+    BatSeq.of_list (elements m) (* TODO: optimize *)
+    
+  let to_seq_from cmp k m =
+    to_seq (filter cmp (fun x -> cmp x k >= 0) m) (* TODO: optimize *)
+  
+
 end
 
 module type S =
@@ -623,7 +701,13 @@ end
 
 module Make (Ord : OrderedType) =
 struct
-  include Set.Make(Ord)
+  (* include Set.Make(Ord) *)
+  type elt = Ord.t
+  type t = elt Concrete.set
+  
+  let empty = Concrete.empty
+  let is_empty = Concrete.is_empty
+  let mem = Concrete.mem Ord.compare
 
   (*Breaking the abstraction*)
 
@@ -651,6 +735,11 @@ struct
   let filter_map f t = t_of_impl (Concrete.filter_map Ord.compare f (impl_of_t t))
 
   let find x t = Concrete.find Ord.compare x (impl_of_t t)
+  let find_opt x t = Concrete.find_opt Ord.compare x (impl_of_t t)
+  let find_first f t = Concrete.find_first f (impl_of_t t)
+  let find_first_opt f t = Concrete.find_first_opt f (impl_of_t t)
+  let find_last f t = Concrete.find_last f (impl_of_t t)
+  let find_last_opt f t = Concrete.find_last_opt f (impl_of_t t)
   let exists f t = Concrete.exists f (impl_of_t t)
   let for_all f t = Concrete.for_all f (impl_of_t t)
   let partition f t =
@@ -658,6 +747,7 @@ struct
     (t_of_impl l, t_of_impl r)
 
   let min_elt t = Concrete.min_elt (impl_of_t t)
+  let min_elt_opt t = Concrete.min_elt_opt (impl_of_t t)
   let pop_min t =
     let mini, others = Concrete.pop_min (impl_of_t t) in
     (mini, t_of_impl others)
@@ -666,7 +756,9 @@ struct
     (maxi, t_of_impl others)
 
   let max_elt t = Concrete.max_elt (impl_of_t t)
+  let max_elt_opt t = Concrete.max_elt_opt (impl_of_t t)
   let choose t = Concrete.choose (impl_of_t t)
+  let choose_opt t = Concrete.choose_opt (impl_of_t t)
   let any t = Concrete.any (impl_of_t t)
   let pop t =
     let e, t = Concrete.pop (impl_of_t t) in
@@ -706,6 +798,18 @@ struct
   let equal t1 t2 = Concrete.equal Ord.compare (impl_of_t t1) (impl_of_t t2)
   let subset t1 t2 = Concrete.subset Ord.compare (impl_of_t t1) (impl_of_t t2)
   let disjoint t1 t2 = Concrete.disjoint Ord.compare (impl_of_t t1) (impl_of_t t2)
+
+  let add_seq s t =
+    Concrete.add_seq Ord.compare s (impl_of_t t)
+    
+  let of_seq s =
+    Concrete.of_seq Ord.compare s
+    
+  let to_seq t =
+    Concrete.to_seq (impl_of_t t)
+    
+  let to_seq_from k t =
+    Concrete.to_seq_from Ord.compare k t
 
   let rec compare_subset s1 s2 =
     match (s1, impl_of_t s2) with
@@ -811,6 +915,11 @@ module PSet = struct (*$< PSet *)
   let is_empty s = Concrete.is_empty s.set
   let mem x s = Concrete.mem s.cmp x s.set
   let find x s = Concrete.find s.cmp x s.set
+  let find_opt x s = Concrete.find_opt s.cmp x s.set
+  let find_first f s =  Concrete.find_first f s.set
+  let find_first_opt f s =  Concrete.find_first_opt f s.set
+  let find_last f s =  Concrete.find_last f s.set
+  let find_last_opt f s =  Concrete.find_last_opt f s.set
   let add x s  = { s with set = Concrete.add s.cmp x s.set }
   let remove x s = { s with set = Concrete.remove s.cmp x s.set }
   let remove_exn x s = { s with set = Concrete.remove_exn s.cmp x s.set }
@@ -829,8 +938,10 @@ module PSet = struct (*$< PSet *)
   let to_list = elements
   let to_array s = Concrete.to_array s.set
   let choose s = Concrete.choose s.set
+  let choose_opt s = Concrete.choose_opt s.set
   let any s = Concrete.any s.set
   let min_elt s = Concrete.min_elt s.set
+  let min_elt_opt s = Concrete.min_elt_opt s.set
   let pop_min s =
     let mini, others = Concrete.pop_min s.set in
     (mini, { s with set = others })
@@ -839,6 +950,7 @@ module PSet = struct (*$< PSet *)
     (maxi, { s with set = others })
 
   let max_elt s = Concrete.max_elt s.set
+  let max_elt_opt s = Concrete.max_elt_opt s.set
   let enum s = Concrete.enum s.set
   let of_enum ?(cmp = compare) e = { cmp; set = Concrete.of_enum compare e }
   let of_enum_cmp ~cmp t = { cmp = cmp; set = Concrete.of_enum cmp t }
@@ -877,6 +989,20 @@ module PSet = struct (*$< PSet *)
   let equal s1 s2 = Concrete.equal s1.cmp s1.set s2.set
   let subset s1 s2 = Concrete.subset s1.cmp s1.set s2.set
   let disjoint s1 s2 = Concrete.disjoint s1.cmp s1.set s2.set
+
+                     
+  let add_seq s t =
+    Concrete.add_seq t.cmp s t.set
+    
+  let of_seq  ?(cmp = compare) s =
+    {set = Concrete.of_seq cmp s; cmp = cmp }
+    
+  let to_seq t =
+    Concrete.to_seq t.set
+    
+  let to_seq_from k t =
+    Concrete.to_seq_from t.cmp k t.set
+
 end (*$>*)
 
 type 'a t = 'a Concrete.set
@@ -894,6 +1020,13 @@ let mem x s = Concrete.mem Pervasives.compare x s
 
 let find x s = Concrete.find Pervasives.compare x s
 
+let find_opt x s = Concrete.find Pervasives.compare x s
+
+let find_first f s = Concrete.find_first f s
+let find_last  f s = Concrete.find_last  f s
+let find_first_opt f s = Concrete.find_first_opt f s
+let find_last_opt  f s = Concrete.find_last_opt  f s
+                 
 (*$T find
   (find 1 (of_list [1;2;3;4;5;6;7;8])) == 1
   (find 8 (of_list [1;2;3;4;5;6;7;8])) == 8
@@ -948,9 +1081,11 @@ let to_list = elements
 let to_array s = Concrete.to_array s
 
 let choose s = Concrete.choose s
+let choose_opt s = Concrete.choose_opt s
 let any s = Concrete.any s
 
 let min_elt s = Concrete.min_elt s
+let min_elt_opt s = Concrete.min_elt_opt s
 
 (*$Q min_elt
   (Q.list Q.small_int) (fun l -> l = [] || \
@@ -986,6 +1121,8 @@ let pop_max s = Concrete.pop_max s
 *)
 
 let max_elt s = Concrete.max_elt s
+
+let max_elt_opt s = Concrete.max_elt_opt s
 
 let enum s = Concrete.enum s
 
@@ -1025,6 +1162,20 @@ let equal s1 s2 = Concrete.equal Pervasives.compare s1 s2
 let subset s1 s2 = Concrete.subset Pervasives.compare s1 s2
 let disjoint s1 s2 = Concrete.disjoint Pervasives.compare s1 s2
 
+
+let add_seq s t =
+  Concrete.add_seq Pervasives.compare s t
+  
+let of_seq s =
+  Concrete.of_seq Pervasives.compare s
+  
+let to_seq t =
+  Concrete.to_seq t
+  
+let to_seq_from k t =
+  Concrete.to_seq_from Pervasives.compare k t
+
+                   
 (*$T subset
    subset (of_list [1;2;3]) (of_list [1;2;3;4])
    not (subset (of_list [1;2;3;5]) (of_list [1;2;3;4]))
