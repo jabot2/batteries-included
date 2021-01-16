@@ -123,6 +123,7 @@ module Stdlib_verifications = struct
       Map.bindings (List.fold_right (fun x m -> Map.add x x m) l Map.empty)
   module IntMap = struct
      include BatMap.Int
+     let update = update_stdlib
   end 
   let _ = assert ([1,1;2,2;3,3;] = (sort_map (module IntMap) [3; 1; 2;]))
 

@@ -90,11 +90,11 @@ sig
       [m], plus a binding of [x] to [y]. If [x] was already bound
       in [m], its previous binding disappears. *)
 
-  val update : key -> ('a option -> 'a option) -> 'a t -> 'a t
+  val update_stdlib : key -> ('a option -> 'a option) -> 'a t -> 'a t
   (* from stdlib?? *)
 
-  val update_old: key -> key -> 'a -> 'a t -> 'a t
-  (** [update_old k1 k2 v2 m] replace the previous binding of [k1] in [m] by
+  val update: key -> key -> 'a -> 'a t -> 'a t
+  (** [update k1 k2 v2 m] replace the previous binding of [k1] in [m] by
       [k2] associated to [v2].
       This is equivalent to [add k2 v2 (remove k1) m], but more efficient
       in the case where [k1] and [k2] have the same key ordering.

@@ -294,7 +294,7 @@ module Concrete = struct
     in
     loop map
 
-  let update_old k1 k2 v2 cmp map =
+  let update k1 k2 v2 cmp map =
     if cmp k1 k2 <> 0 then
       add k2 v2 cmp (remove_exn k1 cmp map)
     else
@@ -311,7 +311,10 @@ module Concrete = struct
       in
       loop map
 
-  let update k f cmp m = failwith "unimplemented"
+  let update_stdlib k f cmp m =
+    match f (find_option k cmp m) with
+    | Some x -> add k x cmp m
+    | None -> remove k cmp m
 
   let mem x cmp map =
     let rec loop = function
@@ -820,11 +823,36 @@ module Concrete = struct
         | Some v2 -> add k (f v1 v2) cmp1 m)
         m1 empty
 
-  let to_seq _ = failwith "unimplemented"
-  let of_seq _ = failwith "unimplemented"
-  let add_seq _ = failwith "unimplemented"
-  let to_seq_from _ _ = failwith "unimplemented"
-  let union_stdlib _f _m1 _m2 = failwith "unimplemented"
+  let add_seq cmp s m =
+    Seq.fold_left
+      (fun m (k, v) -> add k v cmp m)
+      m
+      s
+    
+  let of_seq cmp s =
+    add_seq cmp s empty
+    
+  let to_seq m =
+    BatSeq.of_list (bindings m) (* TODO: optimize *)
+    
+  let to_seq_from cmp k m =
+    to_seq m
+    (* let foo =
+     *   List.filter
+     *     (fun (k2, _v) -> cmp k k2 >= 0)
+     *     (bindings m) in
+     * BatSeq.of_list foo *)
+    
+  let union_stdlib cmp f m1 m2 =
+    foldi
+      (fun k v m ->
+        if mem k cmp m
+        then match f k v (find k cmp m) with
+             | Some v2 -> add k v2 cmp m
+             | None -> m
+        else add k v cmp m)
+      m1
+      m2
     
   let compare ckey cval m1 m2 =
     BatEnum.compare (fun (k1,v1) (k2,v2) -> BatOrd.bin_comp ckey k1 k2 cval v1 v2) (enum m1) (enum m2)
@@ -842,8 +870,8 @@ sig
   val is_empty: 'a t -> bool
   val cardinal: 'a t -> int
   val add: key -> 'a -> 'a t -> 'a t
-  val update : key -> ('a option -> 'a option) -> 'a t -> 'a t
-  val update_old: key -> key -> 'a -> 'a t -> 'a t
+  val update_stdlib: key -> ('a option -> 'a option) -> 'a t -> 'a t
+  val update: key -> key -> 'a -> 'a t -> 'a t
   val find: key -> 'a t -> 'a
   val find_opt: key -> 'a t -> 'a option
   val find_default: 'a -> key -> 'a t -> 'a
@@ -957,8 +985,8 @@ struct
   let backwards t = Concrete.backwards (impl_of_t t)
   let keys t = Concrete.keys (impl_of_t t)
   let values t = Concrete.values (impl_of_t t)
-  let update_old k1 k2 v2 t = t_of_impl (Concrete.update_old k1 k2 v2 Ord.compare (impl_of_t t))
-  let update k f t = t_of_impl (Concrete.update t f Ord.compare (impl_of_t t))
+  let update k1 k2 v2 t = t_of_impl (Concrete.update k1 k2 v2 Ord.compare (impl_of_t t))
+  let update_stdlib k f m = t_of_impl (Concrete.update_stdlib k f Ord.compare (impl_of_t m))
   let find_default d k t = Concrete.find_default d k Ord.compare (impl_of_t t)
   let find_opt k t = Concrete.find_option k Ord.compare (impl_of_t t)
   let find_first     f t = Concrete.find_first     f (impl_of_t t)
@@ -1038,6 +1066,8 @@ struct
 
   let bindings t = Concrete.bindings (impl_of_t t)
 
+  let union f m1 m2 = t_of_impl (Concrete.union_stdlib Ord.compare f (impl_of_t m1) (impl_of_t m2))
+
   let merge f t1 t2 =
     t_of_impl (Concrete.merge f Ord.compare (impl_of_t t1) (impl_of_t t2))
 
@@ -1088,7 +1118,7 @@ let is_empty x = x = Concrete.Empty
 
 let add x d m = Concrete.add x d Pervasives.compare m
 
-let update k1 k2 v2 m = Concrete.update_old k1 k2 v2 Pervasives.compare m
+let update k1 k2 v2 m = Concrete.update k1 k2 v2 Pervasives.compare m
 
 let find x m = Concrete.find x Pervasives.compare m
 
@@ -1209,11 +1239,16 @@ let min_binding_opt = Concrete.min_binding_opt
 let pop_min_binding = Concrete.pop_min_binding
 let pop_max_binding = Concrete.pop_max_binding
 
-let of_seq = Concrete.of_seq
-let add_seq = Concrete.add_seq
+let of_seq _ = failwith "unimplemented"
+
+let add_seq _ = failwith "unimplemented"
+
 let to_seq = Concrete.to_seq
-let to_seq_from = Concrete.to_seq_from
-let union_stdlib = Concrete.union_stdlib
+
+let to_seq_from x m =
+  to_seq m                      (*  *)
+
+let union_stdlib f m1 m2 = Concrete.union_stdlib Pervasives.compare f m1 m2
 
 let singleton k v = Concrete.singleton k v
 

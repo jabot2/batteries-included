@@ -430,7 +430,7 @@ struct
     try remove_exn 1 empty |> ignore ; false with Not_found -> true
   *)
 
-  let update_old k1 k2 v2 tr =
+  let update k1 k2 v2 tr =
     if Ord.compare k1 k2 <> 0 then
       add k2 v2 (remove k1 tr)
     else
@@ -443,7 +443,10 @@ struct
         end
         end
 
-  let update k f tr = failwith "unimplemented"
+  let update_stdlib k f m =
+    match f (find_opt k m) with
+    | Some x -> add k x m
+    | None -> remove k m
 
   let mem k m =
     try ignore (find k m) ; true with Not_found -> false
