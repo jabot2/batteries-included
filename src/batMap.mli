@@ -91,8 +91,18 @@ sig
       in [m], its previous binding disappears. *)
 
   val update_stdlib : key -> ('a option -> 'a option) -> 'a t -> 'a t
-  (* from stdlib?? *)
+  (** [update_stdlib k f m] returns a map containing the same bindings as [m],
+      except [k] has a new binding as determined by [f]:
+      First, calculate [y] as [f (find_opt k m)].
+      If [y = Some v] then [k] will be bound to [v] in the resulting map.
+      Else [k] will not be bound in the resulting map.
 
+      This function does the same thing as [update] in the stdlib, but has a
+      different name for backwards compatibility reasons.
+
+      @since NEXT_RELEASE *)
+
+  (* TODO: maybe deprecate this function to re-gain compatibility with stdlib? *)
   val update: key -> key -> 'a -> 'a t -> 'a t
   (** [update k1 k2 v2 m] replace the previous binding of [k1] in [m] by
       [k2] associated to [v2].
@@ -528,6 +538,15 @@ val update: 'a -> 'a -> 'b -> ('a, 'b) t -> ('a, 'b) t
     @raise Not_found if [k1] is not bound in [m].
     @since 2.4.0 *)
 
+val update_stdlib : 'a -> ('b option -> 'b option) -> ('a, 'b) t -> ('a, 'b) t
+(** [update_stdlib k f m] returns a map containing the same bindings as [m],
+    except [k] has a new binding as determined by [f]:
+    First, calculate [y] as [f (find_opt k m)].
+    If [y = Some v] then [k] will be bound to [v] in the resulting map.
+    Else [k] will not be bound in the resulting map.
+
+    @since NEXT_RELEASE *)
+
 val find : 'a -> ('a, 'b) t -> 'b
 (** [find x m] returns the current binding of [x] in [m],
     or raises [Not_found] if no such binding exists. *)
@@ -940,6 +959,15 @@ module PMap : sig
       @raise Not_found if [k1] is not bound in [m].
       @since 2.4.0 *)
 
+  val update_stdlib : 'a -> ('b option -> 'b option) -> ('a, 'b) t -> ('a, 'b) t
+  (** [update_stdlib k f m] returns a map containing the same bindings as [m],
+      except [k] has a new binding as determined by [f]:
+      First, calculate [y] as [f (find_opt k m)].
+      If [y = Some v] then [k] will be bound to [v] in the resulting map.
+      Else [k] will not be bound in the resulting map.
+  
+      @since NEXT_RELEASE *)
+  
   val find : 'a -> ('a, 'b) t -> 'b
   (** [find x m] returns the current binding of [x] in [m],
       or raises [Not_found] if no such binding exists. *)
@@ -1238,7 +1266,7 @@ module PMap : sig
     
       @since NEXT_RELEASE  *)
     
-  val of_seq : ('key * 'a) Seq.t -> ('key, 'a) t
+  val of_seq : ?cmp:('key -> 'key -> int) -> ('key * 'a) Seq.t -> ('key, 'a) t
   (** build a map from the given bindings 
     
       @since NEXT_RELEASE *)

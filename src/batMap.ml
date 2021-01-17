@@ -53,6 +53,9 @@ module Concrete = struct
 
   let empty = Empty
 
+  let is_empty m =
+    m == Empty
+
   (* The create and bal functions are from stdlib's map.ml (3.12)
      differences from the old (extlib) implementation :
 
@@ -835,13 +838,8 @@ module Concrete = struct
   let to_seq m =
     BatSeq.of_list (bindings m) (* TODO: optimize *)
     
-  let to_seq_from cmp k m =
-    to_seq m
-    (* let foo =
-     *   List.filter
-     *     (fun (k2, _v) -> cmp k k2 >= 0)
-     *     (bindings m) in
-     * BatSeq.of_list foo *)
+  let to_seq_from (cmp : 'a -> 'a -> int) k m =
+    to_seq (filter (fun k2 _ -> cmp k k2 >= 0) m cmp)
     
   let union_stdlib cmp f m1 m2 =
     foldi
@@ -1120,6 +1118,12 @@ let add x d m = Concrete.add x d Pervasives.compare m
 
 let update k1 k2 v2 m = Concrete.update k1 k2 v2 Pervasives.compare m
 
+let update_stdlib k f m = Concrete.update_stdlib k f Pervasives.compare m
+
+(*$T update_stdlib
+  
+ *)
+
 let find x m = Concrete.find x Pervasives.compare m
 
 (*$T add; find
@@ -1239,14 +1243,16 @@ let min_binding_opt = Concrete.min_binding_opt
 let pop_min_binding = Concrete.pop_min_binding
 let pop_max_binding = Concrete.pop_max_binding
 
-let of_seq _ = failwith "unimplemented"
+let of_seq s =
+  Concrete.of_seq Pervasives.compare s
 
-let add_seq _ = failwith "unimplemented"
+let add_seq s m =
+  Concrete.add_seq Pervasives.compare s m
 
 let to_seq = Concrete.to_seq
 
 let to_seq_from x m =
-  to_seq m                      (*  *)
+  Concrete.to_seq_from Pervasives.compare x m
 
 let union_stdlib f m1 m2 = Concrete.union_stdlib Pervasives.compare f m1 m2
 
@@ -1296,7 +1302,10 @@ let union m1 m2 =
   let m1 = empty |> add 1 1 |> add 2 2 in \
   let m2 = empty |> add 2 20 |> add 3 30 in \
   (union m1 m2 |> find 2 = 20) && (union m2 m1 |> find 2 = 2)
-*)
+ *)
+
+let union_stdlib f m1 m2 =
+  Concrete.union_stdlib Pervasives.compare f m1 m2
 
 let diff m1 m2 =
   let comp = Pervasives.compare in
@@ -1358,6 +1367,9 @@ module PMap = struct (*$< PMap *)
 
   let update k1 k2 v2 m =
     { m with map = Concrete.update k1 k2 v2 m.cmp m.map }
+
+  let update_stdlib k f m =
+    { m with map = Concrete.update_stdlib k f m.cmp m.map }
 
   let find x m =
     Concrete.find x m.cmp m.map
@@ -1548,12 +1560,20 @@ module PMap = struct (*$< PMap *)
 
   let merge_unsafe f m1 m2 =
     { m1 with map = Concrete.merge f m1.cmp m1.map m2.map }
+
+  let of_seq ?(cmp = Pervasives.compare) s =
+    { map = Concrete.of_seq cmp s; cmp = cmp }
     
-  let of_seq _ = failwith "unimplemented" 
-  let add_seq _ _ =  failwith "unimplemented" 
-  let to_seq _ = failwith "unimplemented" 
-  let to_seq_from _ _ = failwith "unimplemented"
-  let union_stdlib _ _ _ = failwith "unimplemented" 
+  let to_seq m = Concrete.to_seq m.map
+             
+  let to_seq_from k m =
+    Concrete.to_seq_from m.cmp k m.map
+                      
+  let add_seq s m =
+    { m with map = Concrete.add_seq m.cmp s m.map }
+
+  let union_stdlib f m1 m2 =
+    { m1 with map = Concrete.union_stdlib m1.cmp f m1.map m2.map }
 
   let bindings m =
     Concrete.bindings m.map
