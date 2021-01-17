@@ -347,7 +347,6 @@ module Concrete = struct
       in
       loop map
 
-  (* phys equality ensured if add & remove guarantee it *)
   let update_stdlib k f cmp m =
     let findresult = (find_option k cmp m) in
     match f findresult with
@@ -1147,7 +1146,12 @@ module String = Make (BatString)
 type ('k, 'v) t = ('k, 'v) Concrete.map
 
 let empty = Concrete.empty
-let is_empty x = x = Concrete.Empty
+let is_empty = Concrete.is_empty
+
+(*$T is_empty
+  is_empty empty
+  not(is_empty (empty |> add 1 1))
+ *)
 
 let add x d m = Concrete.add x d Pervasives.compare m
 
@@ -1198,20 +1202,6 @@ let find_first f map = Concrete.find_first f map
 let find_first_opt f map = Concrete.find_first_opt f map
 let find_last f map = Concrete.find_last f map
 let find_last_opt f map = Concrete.find_last_opt f map
-
-(*$T pop_min_binding
-  (empty |> add 1 true |> pop_min_binding) = ((1, true), empty)
-  (empty |> add 1 true |> add 2 false |> pop_min_binding) = \
-  ((1, true), add 2 false empty)
-  try ignore (pop_min_binding empty); false with Not_found -> true
-*)
-
-(*$T pop_max_binding
-  (empty |> add 1 true |> pop_max_binding) = ((1, true), empty)
-  (empty |> add 1 true |> add 2 false |> pop_max_binding) = \
-  ((2, false), add 1 true empty)
-  try ignore (pop_max_binding empty); false with Not_found -> true
-*)
 
 (*$Q find ; add
   (Q.list Q.small_int) (fun xs -> \
@@ -1286,6 +1276,20 @@ let max_binding_opt = Concrete.max_binding_opt
 let min_binding_opt = Concrete.min_binding_opt
 let pop_min_binding = Concrete.pop_min_binding
 let pop_max_binding = Concrete.pop_max_binding
+                    
+(*$T pop_min_binding
+  (empty |> add 1 true |> pop_min_binding) = ((1, true), empty)
+  (empty |> add 1 true |> add 2 false |> pop_min_binding) = \
+  ((1, true), add 2 false empty)
+  try ignore (pop_min_binding empty); false with Not_found -> true
+*)
+
+(*$T pop_max_binding
+  (empty |> add 1 true |> pop_max_binding) = ((1, true), empty)
+  (empty |> add 1 true |> add 2 false |> pop_max_binding) = \
+  ((2, false), add 1 true empty)
+  try ignore (pop_max_binding empty); false with Not_found -> true
+*)
 
 (*$T choose
   let of_list l = of_enum (BatList.enum l) in \
@@ -1322,6 +1326,30 @@ let pop_max_binding = Concrete.pop_max_binding
   Some (1,1) = min_binding_opt (of_list [1,1;2,2;3,3])
   None = min_binding_opt empty
  *)
+
+(*$T add
+  let s = empty |> add 1 1 |> add 2 2 in s == (s |> add 2 2)
+  *)
+
+(*$T remove
+  let s = empty |> add 1 1 |> add 2 2 in s == (s |> remove 4)
+  *)
+
+(*$T update
+  let s = empty |> add 1 1 |> add 2 2 in \
+  s == (s |> update 2 2 2)
+  *)
+
+(*$T update_stdlib
+  let s = empty |> add 1 1 |> add 2 2 in \
+  s == (s |> update_stdlib 2 (fun _ -> Some 2))
+  *)
+
+(*$T filter
+  let s = empty |> add 1 1 |> add 2 2 in \
+  s == (filter (fun _ _ -> true) s)
+  *)
+
                     
 let of_seq s =
   Concrete.of_seq Pervasives.compare s
@@ -1376,7 +1404,6 @@ let extract x m = Concrete.extract x Pervasives.compare m
 let pop = Concrete.pop
 
 let split k m = Concrete.split k Pervasives.compare m
-
 
 (* We can't compare external primitives directly using the physical equality
    operator, since two different occurrences of an external primitive are two
